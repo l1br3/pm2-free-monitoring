@@ -22,7 +22,12 @@ module.exports.indentify_node_process = cron.schedule('*/10 * * * * *', function
           "NAME": process.name || null,
           "CPU": process.monit.cpu || 0,
           "MEM": process.monit.memory || 0,
-          "PROCESS_ID": process.pid || 0
+          "PROCESS_ID": process.pid || 0,
+          "RESTARTS": process.pm2_env.restart_time || 0,
+          "EXIT_CODE" process.pm2_env.exit_code || 0,
+          "VERSION": process.pm2_env.version || "1.0.0",
+          "BRANCH": process.pm2_env.versioning.branch || null,
+          "ENV": process.pm2_env.NODE_ENV || "development",
         };
         callback(null, influx_input);
       } else {
