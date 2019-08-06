@@ -13,6 +13,9 @@ module.exports.indentify_node_process = cron.schedule('*/10 * * * * *', function
     let pm2DataResponse = JSON.parse(pm2Response);
     async.map(pm2DataResponse.processes, (process, callback) => {
       if (process) {
+        let envCode = process.pm2_env.NODE_ENV === 'production' ? 1 : null
+        envCode = process.pm2_env.NODE_ENV === 'development' ? 0 : envCode
+        
         let influx_input = {};
         influx_input['measurement'] = 'pm2-node';
         influx_input['tags'] = {
@@ -27,7 +30,7 @@ module.exports.indentify_node_process = cron.schedule('*/10 * * * * *', function
           "EXIT_CODE": process.pm2_env.exit_code || 0,
           "VERSION": process.pm2_env.version || "1.0.0",
           "BRANCH": process.pm2_env.versioning.branch || null,
-          "ENV": process.pm2_env.NODE_ENV || "development",
+          "ENV": envCode,
         };
         callback(null, influx_input);
       } else {
