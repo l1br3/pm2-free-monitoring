@@ -13,7 +13,8 @@ module.exports.indentify_node_process = cron.schedule('*/10 * * * * *', function
     let pm2DataResponse = JSON.parse(pm2Response);
     async.map(pm2DataResponse.processes, (process, callback) => {
       if (process) {
-        let envCode = process.pm2_env.NODE_ENV === 'production' ? 1 : null
+        if(process.name === 'pm2-http-interface' || process.name === 'pm2_monitoring') return callback("Not send metrics for pm2_monitoring or pm2 web interface", null);
+        let envCode = process.pm2_env.NODE_ENV === 'production' ? 1 : -1
         envCode = process.pm2_env.NODE_ENV === 'development' ? 0 : envCode
         
         let influx_input = {};
@@ -39,7 +40,7 @@ module.exports.indentify_node_process = cron.schedule('*/10 * * * * *', function
     }, (err, result) => {
       if (err) {
         console.log("Err :: ", err);
-      } else {
+      } else if (result) {
         influx.writePoints(result)
           .then(() => {
             console.log('write point success');
