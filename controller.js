@@ -1,79 +1,69 @@
 require('dotenv').config()
 const cron = require('node-cron')
-const async = require('async');
 const request = require('request')
-const influx = require('./model');
+const influx = require('./model')
 
 /*
 * Node scheduler which runs on every 10 seconds.
 */
+
+function getInfluxPointFromProcess (process) {
+  if (process.name === 'pm2-http-interface' || process.name === 'pm2_monitoring') return null
+
+  let envCode = process.pm2_env.NODE_ENV === 'production' ? 1 : -1
+  envCode = process.pm2_env.NODE_ENV === 'development' ? 0 : envCode
+
+  const influxPoint = {}
+  influxPoint.measurement = 'pm2-node'
+  influxPoint.tags = {
+    host: process.name || null
+  }
+  influxPoint.fields = {
+    NAME: process.name || null,
+    CPU: process.monit.cpu || 0,
+    MEM: process.monit.memory || 0,
+    PROCESS_ID: process.pid || 0,
+    RESTARTS: process.pm2_env.restart_time || 0,
+    EXIT_CODE: process.pm2_env.exit_code || 0,
+    VERSION: process.pm2_env.version || '1.0.0',
+    BRANCH: process.pm2_env.versioning.branch || null,
+    ENV: envCode
+  }
+
+  return influxPoint
+}
+
 module.exports.indentify_node_process = cron.schedule('*/10 * * * * *', function () {
-  console.log("indentify_node_process called()");
   pm2Data().then(function (pm2Response) {
-    let pm2DataResponse = JSON.parse(pm2Response);
-    async.map(pm2DataResponse.processes, (process, callback) => {
-      if (process) {
-        if(process.name === 'pm2-http-interface' || process.name === 'pm2_monitoring') return callback("Not send metrics for pm2_monitoring or pm2 web interface", null);
-        let envCode = process.pm2_env.NODE_ENV === 'production' ? 1 : -1
-        envCode = process.pm2_env.NODE_ENV === 'development' ? 0 : envCode
-        
-        let influx_input = {};
-        influx_input['measurement'] = 'pm2-node';
-        influx_input['tags'] = {
-          "host": process.name || null
-        };
-        influx_input['fields'] = {
-          "NAME": process.name || null,
-          "CPU": process.monit.cpu || 0,
-          "MEM": process.monit.memory || 0,
-          "PROCESS_ID": process.pid || 0,
-          "RESTARTS": process.pm2_env.restart_time || 0,
-          "EXIT_CODE": process.pm2_env.exit_code || 0,
-          "VERSION": process.pm2_env.version || "1.0.0",
-          "BRANCH": process.pm2_env.versioning.branch || null,
-          "ENV": envCode,
-        };
-        callback(null, influx_input);
-      } else {
-        callback("Error", null);
-      }
-    }, (err, result) => {
-      if (err) {
-        console.log("Err :: ", err);
-      } else if (result) {
-        influx.writePoints(result)
-          .then(() => {
-            console.log('write point success');
-          }).catch(err => console.error(`write point fail,  ${err.message}`));
-      }
-    });
-  }, function (rejectedValue) {
-    console.log("rejectedValue :: ", rejectedValue);
+    const pm2DataResponse = JSON.parse(pm2Response)
+    const points = pm2DataResponse.processes.map(getInfluxPointFromProcess).filter(point => point)
+    influx.writePoints(points)
+      .then(() => {
+        console.log('write point success')
+      })
+      .catch(err => console.error(`write point fail,  ${err.message}`))
   }).catch((err) => {
-    console.log(err);
-  });
-
-}, false);
-
+    console.error(err)
+  })
+}, false)
 
 /*
-* this function make request to your pm2 microservices server and 
-* get all the data of all microservices. 
+* this function make request to your pm2 microservices server and
+* get all the data of all microservices.
 */
-var pm2Data = function () {
+function pm2Data () {
   return new Promise((resolve, reject) => {
     request({
-      method: "GET",
+      method: 'GET',
       url: `http://${process.env.PM2_IP}:9615/`
     }, function (error, response, body) {
       if (error) {
-        reject();
-      } else if (response && response.statusCode == 200) {
-        resolve(body);
+        reject(error)
+      } else if (response && response.statusCode === 200) {
+        resolve(body)
       } else {
-        console.log("Did not get any response!");
-        reject();
+        reject(new Error('Did not get any response!'))
       }
-    });
-  });
-};
+    })
+  })
+}
