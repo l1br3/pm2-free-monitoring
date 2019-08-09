@@ -43,7 +43,7 @@ module.exports.indentify_node_process = cron.schedule('*/10 * * * * *', function
     const points = pm2DataResponse.processes.map(getInfluxPointFromProcess).filter(point => point)
     influx.writePoints(points)
       .then(() => {
-        console.log('write point success')
+        // write point success
       })
       .catch(err => console.error(`write point fail,  ${err.message}`))
   }).catch((err) => {
