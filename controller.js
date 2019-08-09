@@ -13,6 +13,8 @@ function getInfluxPointFromProcess (process) {
   let envCode = process.pm2_env.NODE_ENV === 'production' ? 1 : -1
   envCode = process.pm2_env.NODE_ENV === 'development' ? 0 : envCode
 
+  const statusCode = process.status === 'online' ? 1 : 0
+  
   const influxPoint = {}
   influxPoint.measurement = 'pm2-node'
   influxPoint.tags = {
@@ -27,7 +29,8 @@ function getInfluxPointFromProcess (process) {
     EXIT_CODE: process.pm2_env.exit_code || 0,
     VERSION: process.pm2_env.version || '1.0.0',
     BRANCH: process.pm2_env.versioning.branch || null,
-    ENV: envCode
+    ENV: envCode,
+    STATUS: statusCode
   }
 
   return influxPoint
