@@ -13,7 +13,7 @@ function getInfluxPointFromProcess (process) {
   let envCode = process.pm2_env.NODE_ENV === 'production' ? 1 : -1
   envCode = process.pm2_env.NODE_ENV === 'development' ? 0 : envCode
 
-  const statusCode = process.status === 'online' ? 1 : 0
+  const statusCode = process.pm2_env.status === 'online' ? 1 : 0
   
   const influxPoint = {}
   influxPoint.measurement = 'pm2-node'
