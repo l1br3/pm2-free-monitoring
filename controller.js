@@ -23,14 +23,15 @@ function getInfluxPointFromProcess (process) {
   influxPoint.fields = {
     NAME: process.name || null,
     CPU: process.monit.cpu || 0,
-    MEM: process.monit.memory || 0,
+    MEM: process.monit.memory / 1048576 || 0,
     PROCESS_ID: process.pid || 0,
     RESTARTS: process.pm2_env.restart_time || 0,
     EXIT_CODE: process.pm2_env.exit_code || 0,
     VERSION: process.pm2_env.version || '1.0.0',
     BRANCH: process.pm2_env.versioning.branch || null,
     ENV: envCode,
-    STATUS: statusCode
+    STATUS_CODE: statusCode,
+    STATUS: process.pm2_env.status
   }
 
   return influxPoint
