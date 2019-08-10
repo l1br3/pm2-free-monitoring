@@ -18,7 +18,8 @@ function getInfluxPointFromProcess (process) {
   const influxPoint = {}
   influxPoint.measurement = 'pm2-node'
   influxPoint.tags = {
-    host: process.name || null
+    host: process.name || null,
+    region: process.pm2_env.REGION || null
   }
   influxPoint.fields = {
     NAME: process.name || null,
